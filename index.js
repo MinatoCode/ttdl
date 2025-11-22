@@ -40,9 +40,9 @@ module.exports = async (req, res) => {
       .filter(u => !u.includes("/a/") && !u.includes("/m/"));
 
     if (!matches.length)
-      return res.json({ success: false, error: "No clean tikcdn.io URL found" });
+      return res.json({ success: false, error: "No clean tikcdn.io URL found", raw: html });
 
-    return res.json({ success: true, url: matches[0] });
+    return res.json({ success: true, url: html });
 
   } catch (e) {
     return res.json({ success: false, error: "Request failed or blocked by Cloudflare" });
