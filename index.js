@@ -25,7 +25,7 @@ module.exports = async (req, res) => {
         "Hx-Trigger": "_gcaptcha_pt",
         "Origin": "https://ssstik.io",
         "Referer": "https://ssstik.io/",
-        "User-Agent": "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 Chrome/137 Mobile Safari/537.36"
+        "User-Agent": "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 Chrome/137 Mobile Safari/537.36",
         // Add cookies if you have any, e.g.
         //
         "Cookie": "_ga=GA1.1.768944148.1763344707; _gads=ID=..."
