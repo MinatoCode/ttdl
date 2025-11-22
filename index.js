@@ -1,71 +1,49 @@
 const axios = require("axios");
-const qs = require("qs");
 
 module.exports = async (req, res) => {
+  const { url } = req.query;
+
+  if (!url)
+    return res.status(400).json({ success: false, error: "Missing TikTok URL" });
+
+  if (url.includes("/a/") || url.includes("/m/"))
+    return res.json({ success: false, error: "Invalid TikTok URL. /a/ or /m/ not allowed." });
+
   try {
-    const { url } = req.query;
+    // Manually encode form data
+    const formData = `id=${encodeURIComponent(url)}&locale=en&tt=RmJ4d1M3&debug=ab=0&loc=NP`;
 
-    if (!url) {
-      return res.status(400).json({ success: false, error: "Missing TikTok URL" });
-    }
-
-    // Reject /a/ or /m/ TikTok URLs
-    if (url.includes("/a/") || url.includes("/m/")) {
-      return res.json({
-        success: false,
-        error: "Invalid TikTok URL. Do NOT use /a/ or /m/ links."
-      });
-    }
-
-    // Cookies (remove cf_clearance)
-    const COOKIE = `_ga=GA1.1.768944148.1763344707; _gads=34b638ed348fc436;`;
-
-    const data = qs.stringify({
-      id: url,
-      locale: "en",
-      tt: "RmJ4d1M3",
-      debug: "ab=0&loc=NP"
-    });
-
-    const config = {
-      method: "post",
-      url: "https://ssstik.io/abc?url=dl",
+    const response = await axios.post("https://ssstik.io/abc?url=dl", formData, {
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
-        "Cookie": COOKIE,
+        "Accept": "*/*",
+        "Accept-Language": "en-IN,en-GB;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Accept-Encoding": "gzip, deflate, br",
         "Hx-Request": "true",
         "Hx-Current-Url": "https://ssstik.io/",
+        "Hx-Target": "target",
+        "Hx-Trigger": "_gcaptcha_pt",
+        "Origin": "https://ssstik.io",
         "Referer": "https://ssstik.io/",
-        "User-Agent": "Mozilla/5.0"
+        "User-Agent": "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 Chrome/137 Mobile Safari/537.36"
+        // Add cookies if you have any, e.g.
+        // "Cookie": "_ga=GA1.1.768944148.1763344707; _gads=ID=..."
       },
-      data
-    };
+      timeout: 8000
+    });
 
-    const response = await axios(config);
-    const html = response.data;
+    const html = response.data || "";
 
-    // Extract ALL tikcdn.io/ssstik URLs
-    const regex = /(https:\/\/tikcdn\.io\/ssstik\/[^\s"<]+)/g;
-    const allMatches = html.match(regex);
+    // Extract tikcdn.io/ssstik URLs
+    const matches = (html.match(/https:\/\/tikcdn\.io\/ssstik\/[^\s"<]+/g) || [])
+      .filter(u => !u.includes("/a/") && !u.includes("/m/"));
 
-    if (!allMatches) {
-      return res.json({ success: false, error: "No tikcdn.io URL found" });
-    }
+    if (!matches.length)
+      return res.json({ success: false, error: "No clean tikcdn.io URL found" });
 
-    // Filter out /a/ and /m/
-    const cleanURLs = allMatches.filter(u => !u.includes("/a/") && !u.includes("/m/"));
+    return res.json({ success: true, url: matches[0] });
 
-    if (cleanURLs.length === 0) {
-      return res.json({
-        success: false,
-        error: "Only /a/ or /m/ formats found. No clean URL available."
-      });
-    }
-
-    return res.json({ success: true, author : ""MinatoCode", url: cleanURLs[0] });
-
-  } catch (err) {
-    return res.json({ success: false, author: "MinatoCode", error: err.message });
+  } catch (e) {
+    return res.json({ success: false, error: "Request failed or blocked by Cloudflare" });
   }
 };
-                      
