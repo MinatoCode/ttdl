@@ -4,7 +4,7 @@ const qs = require("qs");
 // Replace with your own cookie if needed
 const COOKIE = `_ga=GA1.1.768944148.1763344707; _gads=34b638ed348fc436;`;
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
     const TIKTOK_URL = req.query.url;
 
     if (!TIKTOK_URL) {
@@ -60,5 +60,4 @@ export default async function handler(req, res) {
     } catch (err) {
         return res.status(500).json({ error: "❌ Request Failed: " + err.message });
     }
-    }
-          
+};
