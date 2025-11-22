@@ -4,6 +4,38 @@ const qs = require("qs");
 // Replace with your own cookie if needed
 const COOKIE = `_ga=GA1.1.768944148.1763344707; _gads=34b638ed348fc436;`;
 
+// Maximum number of retries
+const MAX_RETRIES = 5;
+
+// Function to fetch clean TikTok URL with retry logic
+async function fetchTikTokURL(config, attempt = 1) {
+    try {
+        const response = await axios(config);
+        const html = response.data;
+
+        // Extract all TikTok download URLs
+        const regex = /(https:\/\/tikcdn\.io\/ssstik\/[^\s"<]+)/g;
+        const allMatches = html.match(regex);
+
+        if (!allMatches) throw new Error("❌ No tikcdn.io URL found!");
+
+        // Filter out /a/ and /m/ URLs
+        const cleanURLs = allMatches.filter(url => !url.includes("/a/") && !url.includes("/m/"));
+
+        if (cleanURLs.length === 0) throw new Error("❌ Only /a/ or /m/ formats found. No clean URL available.");
+
+        return cleanURLs[0];
+    } catch (err) {
+        if (attempt < MAX_RETRIES) {
+            // Wait 500ms before retrying to avoid rapid-fire requests
+            await new Promise(resolve => setTimeout(resolve, 500));
+            return fetchTikTokURL(config, attempt + 1);
+        } else {
+            throw err;
+        }
+    }
+}
+
 module.exports = async function handler(req, res) {
     const TIKTOK_URL = req.query.url;
 
@@ -38,26 +70,10 @@ module.exports = async function handler(req, res) {
     };
 
     try {
-        const response = await axios(config);
-        const html = response.data;
-
-        // Extract all TikTok download URLs
-        const regex = /(https:\/\/tikcdn\.io\/ssstik\/[^\s"<]+)/g;
-        const allMatches = html.match(regex);
-
-        if (!allMatches) {
-            return res.status(404).json({ error: "❌ No tikcdn.io URL found!" });
-        }
-
-        // Filter out /a/ and /m/ URLs
-        const cleanURLs = allMatches.filter(url => !url.includes("/a/") && !url.includes("/m/"));
-
-        if (cleanURLs.length === 0) {
-            return res.status(404).json({ error: "❌ Only /a/ or /m/ formats found. No clean URL available." });
-        }
-
-        return res.status(200).json({ url: cleanURLs[0] });
+        const cleanURL = await fetchTikTokURL(config);
+        return res.status(200).json({ url: cleanURL });
     } catch (err) {
-        return res.status(500).json({ error: "❌ Request Failed: " + err.message });
+        return res.status(500).json({ error: "❌ Failed after multiple attempts: " + err.message });
     }
 };
+            
